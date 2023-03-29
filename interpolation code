@@ -1,0 +1,114 @@
+/********[ In this program we making a lena image of resolution of 512*512  to resolution of 1204*1024 ]********/
+
+#include <stdio.h>
+#include <stdlib.h>
+int main()
+{
+    FILE *fs = fopen("D:/image_processing/Bmp_copy/BMP_Copy/lena512.bmp","rb");
+
+    unsigned char header[54];          //creating an array to store the header 
+    unsigned char colorTable[1024];    //creating an array to store the colortable 
+/**********************************************************************/
+    if(fs==NULL)                                          //checking wheather file successfully opened or not
+    { 
+        printf("usage: File does not exist.\n");
+        exit(0);
+    }
+
+    int i;
+    for(i=0;i<54;i++)
+    {
+        header[i] = fgetc(fs);   //extracting header from file and store into header array 
+    }
+/**********************************************************************/
+    int height,width,bitdepth,offset;       //declaring vars to store the height,width,bitdepth,offset
+    width = *(int*)&header[18];            //18th byte represent the width
+    height = *(int*)&header[22];          //22nd byte represent the height
+    bitdepth = *(int *)&header[28];      //bitdepth required for color table check
+    offset=*(int*)&header[10];          // offset also used to check color table 
+
+    printf("height: %d\n",height);
+    printf("width: %d\n",width);
+    
+/***************************************************************************************************
+wheather the image is having color table or not u can check it by using either offset or  bit depth 
+for offset it should not equal with 54 
+for bitdepth if bitdepth less than or equal to 8
+*****************************************************************************************************/
+
+    if(offset != 54 || bitdepth<=8)
+    {
+        fread(colorTable, sizeof(unsigned char), 1024, fs);   //read the color table
+    }
+    int size = height*width;
+    unsigned char buff[height][width];        //creating a buffer to store the pixels 
+    printf("size: %d\n",size);
+
+    fread(buff, sizeof(unsigned char),size,fs); // reading the image pixels into the buffer
+/*****************************************************************************/
+    int row = 1024;
+    int col = 1024;
+
+   unsigned char img[row][col]; //creating new array of size row and col
+
+    printf("row: %d\n",row);
+    printf("col: %d\n",col);
+
+/*****************************************************************************/
+    int j;
+    for(i=0;i<height;i++)
+    {
+        for(j=0;j<width;j++)
+        {
+            img[i*2][2*j]=buff[i][j];  // creating space row wise
+        }
+    }
+    for(i=0;i<row;i++)
+    {
+        for(j=1;j<col-1;j+=2)
+        {
+            img[i][j]=(img[i][j-1]+img[i][j+1])/2;  //taking average and filling the blank space row wise
+        }
+        if(j==col-1)
+            img[i][j]=img[i][j-1];       //filling the last pixel of each row 
+    }
+  for(i=1;i<row;i+=2)
+    {
+        if(i==row-1)
+         {
+             for(j=0;j<col;j++)
+             {
+               img[i][j]=img[i-1][j]; //taking average and filling the blank space last coloum 
+             }
+         }
+        else
+        {
+            for(j=0;j<col;j++)
+            {
+              img[i][j]=(img[i-1][j]+img[i+1][j])/2;   //taking average and filling the blank space coloum wise
+            }
+        }
+    }
+/*********************************************************************/
+    int out_img = row * col;
+    *(int*)&header[18]=1024; //updating width in header
+    *(int*)&header[22]=1024;  //updating height in header
+
+     printf("o/p size: %d\n",out_img);
+
+    FILE *out = fopen("D:/image_processing/Bmp_copy/BMP_Copy/lena512_intr2.bmp","wb");   //open a new file to write
+
+    fwrite(header, sizeof(unsigned char), 54, out);         //writing header in new image or output file 
+
+  if(offset != 54)   //check wheather color table is there or not
+  {
+        fwrite(colorTable, sizeof(unsigned char), 1024,out);   //if yes write the color table into output file 
+  }
+
+    fwrite(img, sizeof(unsigned char),1024*1024,out);  //write the pixels into output file 
+
+    fclose(fs);      //close source file
+    fclose(out);     //close dest file
+
+    return 0;
+}
